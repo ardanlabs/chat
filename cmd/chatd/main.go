@@ -10,6 +10,10 @@ import (
 	"github.com/ardanlabs/kit/tcp"
 )
 
+/*
+Deal with reading partial bytes in Read call.
+*/
+
 // Configuation settings.
 const (
 	configKey = "CHAT"

@@ -15,7 +15,7 @@ type connHandler struct{}
 
 // Bind is called to init a reader and writer.
 func (connHandler) Bind(conn net.Conn) (io.Reader, io.Writer) {
-	return bufio.NewReader(conn), bufio.NewWriter(conn)
+	return conn, conn
 }
 
 // reqHandler is required to process client messages.
