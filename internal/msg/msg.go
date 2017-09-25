@@ -1,7 +1,9 @@
 package msg
 
 import (
+	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -13,6 +15,16 @@ const hdrLength = 12
 type MSG struct {
 	Name string
 	Data string
+}
+
+// String implements the fmt Stringer interface.
+func (m MSG) String() string {
+	var b bytes.Buffer
+
+	b.WriteString(fmt.Sprintf("\nName: %s\n", m.Name))
+	b.WriteString(fmt.Sprintf("Data: %s\n", m.Data))
+
+	return b.String()
 }
 
 // Read waits on the network to receive a chat message.
@@ -51,10 +63,9 @@ func Decode(data []byte) MSG {
 
 // Encode will take a message and produce byte slice.
 func Encode(msg MSG) []byte {
-
 	data := make([]byte, hdrLength+len(msg.Data))
 
-	copy(data, msg.Name[:10])
+	copy(data, msg.Name[:len(msg.Name)])
 	binary.BigEndian.PutUint16(data[10:12], uint16(len(msg.Data)))
 	copy(data[12:], msg.Data)
 
