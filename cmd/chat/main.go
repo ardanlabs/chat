@@ -7,6 +7,17 @@ import (
 	"github.com/ardanlabs/chat/internal/msg"
 )
 
+/*
+// Accept keyboard input.
+	reader := bufio.NewReader(os.Stdin)
+
+	// Process keyboard input.
+	for {
+		fmt.Print("\n#> ")
+		cmd, _ := reader.ReadString('\n')
+	}
+*/
+
 func main() {
 
 	// Let's connect back and send a TCP package

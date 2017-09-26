@@ -6,6 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/ardanlabs/chat/cmd/chatd/process"
+	"github.com/ardanlabs/chat/internal/platform/cache"
 	"github.com/ardanlabs/kit/cfg"
 	"github.com/ardanlabs/kit/tcp"
 )
@@ -28,7 +29,9 @@ func init() {
 
 func main() {
 
+	// =========================================================================
 	// Init the configuration system.
+
 	if err := cfg.Init(cfg.EnvProvider{Namespace: configKey}); err != nil {
 		log.Println("Error initalizing configuration system", err)
 		os.Exit(1)
@@ -39,17 +42,28 @@ func main() {
 	// Get configuration.
 	host := cfg.MustString("HOST")
 
-	// Create the configuration.
+	// =========================================================================
+	// Init the caching system.
+
+	cc := cache.New()
+
+	// =========================================================================
+	// Init the socket system.
+
+	evtFunc := func(evt, typ int, ipAddress string, format string, a ...interface{}) {
+		process.Event(cc, evt, typ, ipAddress, format, a)
+	}
+
 	cfg := tcp.Config{
 		NetType: "tcp4",
 		Addr:    host,
 
 		ConnHandler: process.ConnHandler{},
-		ReqHandler:  process.ReqHandler{},
+		ReqHandler:  process.ReqHandler{CC: cc},
 		RespHandler: process.RespHandler{},
 
 		OptEvent: tcp.OptEvent{
-			Event: process.Event,
+			Event: evtFunc,
 		},
 	}
 
@@ -68,6 +82,9 @@ func main() {
 	defer t.Stop()
 
 	log.Printf("main : Waiting for data on: %s", t.Addr())
+
+	// =========================================================================
+	// System started.
 
 	// Listen for an interrupt signal from the OS.
 	sigChan := make(chan os.Signal, 1)
