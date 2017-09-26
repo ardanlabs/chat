@@ -51,7 +51,7 @@ func main() {
 	// Init the socket system.
 
 	evtFunc := func(evt, typ int, ipAddress string, format string, a ...interface{}) {
-		process.Event(cc, evt, typ, ipAddress, format, a)
+		process.Event(cc, evt, typ, ipAddress, format, a...)
 	}
 
 	cfg := tcp.Config{

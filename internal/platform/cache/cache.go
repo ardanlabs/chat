@@ -27,6 +27,21 @@ func New() *Cache {
 	}
 }
 
+// Get returns the current set of clients.
+func (c *Cache) Get(id string) []Client {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	clients := make([]Client, 0, len(c.clients)-1)
+	for _, client := range c.clients {
+		if client.ID != id {
+			clients = append(clients, client)
+		}
+	}
+
+	return clients
+}
+
 // Add adds a client value to the cache.
 func (c *Cache) Add(id string, tcpAddr *net.TCPAddr) error {
 	c.mu.Lock()
