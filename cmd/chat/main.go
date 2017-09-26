@@ -24,7 +24,7 @@ import (
 func main() {
 
 	// Let's connect back and send a TCP package
-	conn, err := net.Dial("tcp4", ":6000")
+	conn, err := net.Dial("tcp4", ":6001")
 	if err != nil {
 		log.Println("dial", err)
 	}

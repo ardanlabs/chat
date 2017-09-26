@@ -35,10 +35,10 @@ func Event(cc *cache.Cache, evt, typ int, ipAddress string, format string, a ...
 }
 
 // Process handles all the communication logic.
-func Process(cc *cache.Cache, r *tcp.Request) {
+func Process(id string, cc *cache.Cache, nats *NATS, r *tcp.Request) {
 	m := msg.Decode(r.Data)
 
-	log.Printf("read : IP[ %s ] : %v\n", r.TCPAddr.IP.String(), m)
+	log.Printf("process : IP[ %s ] : %v\n", r.TCPAddr.IP.String(), m)
 
 	// TODO: Handle errors for multiple adds by the same ID.
 	// TODO: Add an auth message to handle this better.
@@ -47,7 +47,7 @@ func Process(cc *cache.Cache, r *tcp.Request) {
 	d := msg.Encode(m)
 
 	for _, client := range cc.Get(m.Sender) {
-		log.Printf("read : IP[ %s ] : Client[ %s ]\n", r.TCPAddr.IP.String(), client.ID)
+		log.Printf("process : IP[ %s ] : Client[ %s ]\n", r.TCPAddr.IP.String(), client.ID)
 
 		resp := tcp.Response{
 			TCPAddr: client.TCPAddr,
@@ -56,6 +56,15 @@ func Process(cc *cache.Cache, r *tcp.Request) {
 		}
 
 		r.TCP.Send(context.TODO(), &resp)
+
+		// TODO: Only do this if the client is not in our cache.
+		nm := natsMsg{
+			ID:  id,
+			MSG: m,
+		}
+		if err := nats.SendMsg(nm); err != nil {
+			log.Printf("process : IP[ NATS ] : ERROR : Client[ %s ]\n", client.ID)
+		}
 	}
 }
 
@@ -91,12 +100,14 @@ func (ConnHandler) Bind(conn net.Conn) (io.Reader, io.Writer) {
 
 // ReqHandler is required to process client messages.
 type ReqHandler struct {
-	CC *cache.Cache
+	ID   string
+	CC   *cache.Cache
+	NATS *NATS
 }
 
 // Read implements the tcp.ReqHandler interface. It is provided a request
 // value to populate and a io.Reader that was created in the Bind above.
-func (ReqHandler) Read(ipAddress string, reader io.Reader) ([]byte, int, error) {
+func (*ReqHandler) Read(ipAddress string, reader io.Reader) ([]byte, int, error) {
 
 	// Block on the network for our message.
 	data, n, err := msg.Read(reader)
@@ -111,8 +122,8 @@ func (ReqHandler) Read(ipAddress string, reader io.Reader) ([]byte, int, error) 
 
 // Process is used to handle the processing of the message. This method
 // is called on a routine from a pool of routines.
-func (req ReqHandler) Process(r *tcp.Request) {
-	Process(req.CC, r)
+func (req *ReqHandler) Process(r *tcp.Request) {
+	Process(req.ID, req.CC, req.NATS, r)
 }
 
 // RespHandler is required to send messages.

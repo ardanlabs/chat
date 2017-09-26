@@ -11,143 +11,128 @@ gnatsd
 
 */
 
-// import (
-// 	"bytes"
-// 	"log"
-// 	"time"
+import (
+	"encoding/json"
+	"log"
+	"time"
 
-// 	"github.com/ardanlabs/kit/tcp"
-// 	nats "github.com/nats-io/go-nats"
-// 	"github.com/pkg/errors"
-// )
+	"github.com/ardanlabs/chat/internal/msg"
+	"github.com/ardanlabs/kit/tcp"
+	nats "github.com/nats-io/go-nats"
+	"github.com/pkg/errors"
+)
 
-// // Nats subjects.
-// const (
-// 	natsSubject = "msg" // Handling based communication.
-// )
+// Nats subjects.
+const (
+	natsSubject = "msg" // Handling based communication.
+)
 
-// // natsNTMsg is sent to other Tea Servers for NTS based messaging.
-// type natsNTMsg struct {
-// 	id string
-// 	// DATA
-// }
+// natsMsg is sent to other chat servers.
+type natsMsg struct {
+	ID  string
+	MSG msg.MSG
+}
 
-// // String implements the fmt.Stringer interface for logging.
-// func (ntMsg natsNTMsg) String() string {
-// 	var b bytes.Buffer
+// =============================================================================
 
-// 	// TODO
+// NATS represents a nats system from message handling.
+type NATS struct {
+	Config NATSConfig
 
-// 	return b.String()
-// }
+	conn *nats.Conn
+	subs map[string]*nats.Subscription
+}
 
-// // ledID represents the length of the UUID based string we use for the id.
-// const lenID = 36
+// NATSConfig represents required configuration for the nats system.
+type NATSConfig struct {
+	Host string
+	ID   string
+	TCP  *tcp.TCP
+}
 
-// // natsEncode encodes the ...
-// func natsEncode(id string) []byte {
+// StartNATS initializes access to a nats system.
+func StartNATS(cfg NATSConfig) (*NATS, error) {
 
-// 	return data
-// }
+	// Set nats options for connection.
+	opts := nats.Options{
+		Url:            cfg.Host,
+		AllowReconnect: true,
+		MaxReconnect:   -1,
+		ReconnectWait:  time.Second,
+		Timeout:        5 * time.Second,
+	}
 
-// // natsDecode decodes the ...
-// func natsDecode(data []byte) (/*WHAT*/, error) {
+	// Connect to the specified nats server.
+	conn, err := opts.Connect()
+	if err != nil {
+		return nil, errors.Wrap(err, "connecting to NATS")
+	}
 
-// }
+	// Construct the nats value.
+	nts := NATS{
+		Config: cfg,
+		conn:   conn,
+		subs:   make(map[string]*nats.Subscription),
+	}
 
-// // =============================================================================
+	// Declare the event handler for handling recieved messages.
+	f := func(msg *nats.Msg) {
+		// TODO: Don't process your own message, check ID.
 
-// // NATS represents a nats system from message handling.
-// type NATS struct {
-// 	Config NATSConfig
+		// Process Function
+		log.Println(string(msg.Data))
+	}
 
-// 	id   string
-// 	conn *nats.Conn
-// 	subs map[string]*nats.Subscription
-// }
+	// Register the event handler for each known subject.
+	for _, subject := range []string{natsSubject} {
 
-// // NATSConfig represents required configuration for the nats system.
-// type NATSConfig struct {
-// 	Host      string
-// 	TCP   *tcp.TCP
-// }
+		// Subscribe to receive messages for the specified subject.
+		sub, err := conn.Subscribe(subject, f)
+		if err != nil {
+			return nil, errors.Wrapf(err, "subscribing to subject : %s", subject)
+		}
 
-// // StartNATS initializes access to a nats system.
-// func StartNATS(cfg NATSConfig) (*NATS, error) {
+		// Save the subscription with its associated subject.
+		nts.subs[subject] = sub
+		log.Printf("nats : subject subscribed : Subject[ %s ]\n", subject)
+	}
 
-// 	// Set nats options for connection.
-// 	opts := nats.Options{
-// 		Url:            cfg.Host,
-// 		AllowReconnect: true,
-// 		MaxReconnect:   -1,
-// 		ReconnectWait:  time.Second,
-// 		Timeout:        5 * time.Second,
-// 	}
+	log.Printf("nats : service started : Host[ %s ]\n", cfg.Host)
+	return &nts, nil
+}
 
-// 	// Connect to the specified nats server.
-// 	conn, err := opts.Connect()
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "connecting to NATS")
-// 	}
+// Stop shutdowns access to the nats system.
+func (nts *NATS) Stop() {
+	if nts == nil {
+		log.Println("nats : WARNING : nats was not initialized")
+		return
+	}
 
-// 	// Construct the nats value.
-// 	nts := NATS{
-// 		Config: cfg,
-// 		id:     uuid.NewV1().String(),
-// 		conn:   conn,
-// 		subs:   make(map[string]*nats.Subscription),
-// 	}
+	if nts.subs != nil {
 
-// 	// Declare the event handler for handling recieved messages.
-// 	f := func(msg *nats.Msg) {
-// 		// Process Function
-// 	}
+		// Go through each subscription and unsubscribe.
+		for subject, subscription := range nts.subs {
+			if err := subscription.Unsubscribe(); err != nil {
+				log.Printf("nats : ERROR : unsubscribe : subject[ %s ] : %v\n", subject, err)
+				continue
+			}
 
-// 	// Register the event handler for each known subject.
-// 	for _, subject := range []string{natsSubject} {
+			log.Printf("nats : unsubscribed : subject[ %s ]\n", subject)
+		}
+	}
 
-// 		// Subscribe to receive messages for the specified subject.
-// 		sub, err := conn.Subscribe(subject, f)
-// 		if err != nil {
-// 			return nil, errors.Wrapf(err, "subscribing to subject : %s", subject)
-// 		}
+	log.Printf("nats : service stoped : Host[ %s ]\n", nts.Config.Host)
+}
 
-// 		// Save the subscription with its associated subject.
-// 		nts.subs[subject] = sub
-// 		log.Printf("nats : subject subscribed : Subject[ %s ]\n", subject)
-// 	}
+// SendMsg publishes the nats  to other Tea services.
+func (nts *NATS) SendMsg(msg natsMsg) error {
 
-// 	log.Printf("nats : service started : Host[ %s ]\n", cfg.Host)
-// 	return &nts, nil
-// }
+	log.Printf("Nats_Process : IP[ nats ] : Outbound : Sending To NATS : %v\n", msg)
 
-// // Stop shutdowns access to the nats system.
-// func (nts *NATS) Stop() {
-// 	if nts == nil {
-// 		log.Println("nats : WARNING : nats was not initialized")
-// 		return
-// 	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return errors.Wrap(err, "marshaling")
+	}
 
-// 	if nts.subs != nil {
-
-// 		// Go through each subscription and unsubscribe.
-// 		for subject, subscription := range nts.subs {
-// 			if err := subscription.Unsubscribe(); err != nil {
-// 				log.Printf("nats : ERROR : unsubscribe : subject[ %s ] : %v\n", subject, err)
-// 				continue
-// 			}
-
-// 			log.Printf("nats : unsubscribed : subject[ %s ]\n", subject)
-// 		}
-// 	}
-
-// 	log.Printf("nats : service stoped : Host[ %s ]\n", nts.Config.Host)
-// }
-
-// // Send publishes the nats  to other Tea services.
-// func (nts *NATS) SendMsg(sendMsg /*WHAT*/) error {
-
-// 	log.Printf("Nats_Process : IP[ nats ] : Outbound : Sending To NATS : %v\n", ??)
-
-// 	return nts.conn.Publish(natsSubject, natsEncode(nts.id, ??))
-// }
+	return nts.conn.Publish(natsSubject, data)
+}

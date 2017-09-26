@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
+	"time"
 
 	"github.com/ardanlabs/chat/cmd/chatd/process"
 	"github.com/ardanlabs/chat/internal/platform/cache"
@@ -21,7 +23,11 @@ const (
 )
 
 func init() {
-	os.Setenv("CHAT_HOST", ":6000")
+	idInt := time.Now().UnixNano()
+
+	os.Setenv("CHAT_HOST", ":6001")
+	os.Setenv("CHAT_NATS_HOST", "nats://localhost:4222")
+	os.Setenv("CHAT_ID", strconv.Itoa(int(idInt)))
 
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
@@ -41,6 +47,8 @@ func main() {
 
 	// Get configuration.
 	host := cfg.MustString("HOST")
+	nats := cfg.MustString("NATS_HOST")
+	id := cfg.MustString("ID")
 
 	// =========================================================================
 	// Init the caching system.
@@ -54,12 +62,17 @@ func main() {
 		process.Event(cc, evt, typ, ipAddress, format, a...)
 	}
 
+	reqHandler := process.ReqHandler{
+		ID: id,
+		CC: cc,
+	}
+
 	cfg := tcp.Config{
 		NetType: "tcp4",
 		Addr:    host,
 
 		ConnHandler: process.ConnHandler{},
-		ReqHandler:  process.ReqHandler{CC: cc},
+		ReqHandler:  &reqHandler,
 		RespHandler: process.RespHandler{},
 
 		OptEvent: tcp.OptEvent{
@@ -82,6 +95,25 @@ func main() {
 	defer t.Stop()
 
 	log.Printf("main : Waiting for data on: %s", t.Addr())
+
+	// =========================================================================
+	// Init NATS.
+
+	natsCfg := process.NATSConfig{
+		Host: nats,
+		ID:   id,
+		TCP:  t,
+	}
+
+	nts, err := process.StartNATS(natsCfg)
+	if err != nil {
+		log.Printf("main : %s", err)
+		return
+	}
+	defer nts.Stop()
+
+	// Set our NATS access for the request handler.
+	reqHandler.NATS = nts
 
 	// =========================================================================
 	// System started.
