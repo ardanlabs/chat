@@ -12,6 +12,13 @@ import (
 )
 
 /*
+Start NATS:
+gnatsd
+
+Start the Service:
+CHAT_HOST=":6000" ./chatd
+/*
+
 Things TODO:
 1. Add support for signaling out a specific receipient
 2. Fix the Add call to cache so we don't add twice

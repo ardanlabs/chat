@@ -11,6 +11,11 @@ import (
 	"github.com/ardanlabs/kit/cfg"
 )
 
+/*
+Start the Client:
+CHAT_HOST=":6000" ./chat
+*/
+
 // Configuation settings.
 const configKey = "CHAT"
 
