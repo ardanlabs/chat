@@ -15,16 +15,16 @@ func TestCache(t *testing.T) {
 	cc := cache.New()
 
 	id := "bill"
-	address := "?010203040506"
 	tcpAddr := net.TCPAddr{
-		IP:   net.IP{1, 2, 3, 4, 5, 6},
+		IP:   net.IPv4(255, 255, 255, 255),
 		Port: 6000,
 		Zone: "Test",
 	}
+	address := tcpAddr.String()
 
 	t.Log("Given the need to test caching.")
 	{
-		t.Logf("\tTest 0:\tBasic mechanics ID[ %s ] Address[ %s ]", id, tcpAddr.IP.String())
+		t.Logf("\tTest 0:\tBasic mechanics ID[ %s ] Address[ %s ]", id, address)
 		{
 			if err := cc.Add(id, &tcpAddr); err != nil {
 				t.Fatalf("\t%s\tShould be able to add this client : %v\n", failed, err)

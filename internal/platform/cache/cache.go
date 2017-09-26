@@ -32,7 +32,7 @@ func (c *Cache) Get(id string) []Client {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	clients := make([]Client, 0, len(c.clients)-1)
+	clients := make([]Client, 0, len(c.clients))
 	for _, client := range c.clients {
 		if client.ID != id {
 			clients = append(clients, client)
@@ -57,7 +57,7 @@ func (c *Cache) Add(id string, tcpAddr *net.TCPAddr) error {
 	}
 
 	c.clients[id] = client
-	c.addresses[tcpAddr.IP.String()] = id
+	c.addresses[tcpAddr.String()] = id
 
 	return nil
 }

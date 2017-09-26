@@ -8,23 +8,43 @@ import (
 	"os"
 
 	"github.com/ardanlabs/chat/internal/msg"
+	"github.com/ardanlabs/kit/cfg"
 )
 
-/*
-// Accept keyboard input.
-	reader := bufio.NewReader(os.Stdin)
+// Configuation settings.
+const configKey = "CHAT"
 
-	// Process keyboard input.
-	for {
-		fmt.Print("\n#> ")
-		cmd, _ := reader.ReadString('\n')
+func init() {
+
+	// Setup default values that can be overridden in the env.
+	if _, b := os.LookupEnv("CHAT_HOST"); !b {
+		os.Setenv("CHAT_HOST", ":6000")
 	}
-*/
+
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
+}
 
 func main() {
 
+	// =========================================================================
+	// Init the configuration system.
+
+	if err := cfg.Init(cfg.EnvProvider{Namespace: configKey}); err != nil {
+		log.Println("Error initalizing configuration system", err)
+		os.Exit(1)
+	}
+
+	log.Println("Configuration\n", cfg.Log())
+
+	// Get configuration.
+	host := cfg.MustString("HOST")
+
+	// =========================================================================
+	// Connect and get going.
+
 	// Let's connect back and send a TCP package
-	conn, err := net.Dial("tcp4", ":6001")
+	conn, err := net.Dial("tcp4", host)
 	if err != nil {
 		log.Println("dial", err)
 	}

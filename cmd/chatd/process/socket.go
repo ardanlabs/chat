@@ -1,7 +1,6 @@
 package process
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -35,36 +34,23 @@ func Event(cc *cache.Cache, evt, typ int, ipAddress string, format string, a ...
 }
 
 // Process handles all the communication logic.
-func Process(id string, cc *cache.Cache, nats *NATS, r *tcp.Request) {
+func Process(cc *cache.Cache, nats *NATS, r *tcp.Request) {
+	ipAddress := r.TCPAddr.String()
+
+	// Decode the message bytes into a msg.MSG.
 	m := msg.Decode(r.Data)
 
-	log.Printf("process : IP[ %s ] : %v\n", r.TCPAddr.IP.String(), m)
+	log.Printf("Socket_Process : IP[ %s ] : Inbound : %v\n", ipAddress, m)
 
-	// TODO: Handle errors for multiple adds by the same ID.
-	// TODO: Add an auth message to handle this better.
+	// Make sure this client is in the cache.
+	// TODO: This will fail if the Sender is already in the cache.
+	// TODO: We need a type in the message for the first message.
+	// TODO: Then we can check if this is here already.
 	cc.Add(m.Sender, r.TCPAddr)
 
-	d := msg.Encode(m)
-
-	for _, client := range cc.Get(m.Sender) {
-		log.Printf("process : IP[ %s ] : Client[ %s ]\n", r.TCPAddr.IP.String(), client.ID)
-
-		resp := tcp.Response{
-			TCPAddr: client.TCPAddr,
-			Data:    d,
-			Length:  len(d),
-		}
-
-		r.TCP.Send(context.TODO(), &resp)
-
-		// TODO: Only do this if the client is not in our cache.
-		nm := natsMsg{
-			ID:  id,
-			MSG: m,
-		}
-		if err := nats.SendMsg(nm); err != nil {
-			log.Printf("process : IP[ NATS ] : ERROR : Client[ %s ]\n", client.ID)
-		}
+	// Send the message to NATS for processing.
+	if err := nats.SendMsg(m); err != nil {
+		log.Printf("Socket_Process : IP[ %s ] : ERROR : %s\n", ipAddress, err)
 	}
 }
 
@@ -100,7 +86,6 @@ func (ConnHandler) Bind(conn net.Conn) (io.Reader, io.Writer) {
 
 // ReqHandler is required to process client messages.
 type ReqHandler struct {
-	ID   string
 	CC   *cache.Cache
 	NATS *NATS
 }
@@ -123,7 +108,7 @@ func (*ReqHandler) Read(ipAddress string, reader io.Reader) ([]byte, int, error)
 // Process is used to handle the processing of the message. This method
 // is called on a routine from a pool of routines.
 func (req *ReqHandler) Process(r *tcp.Request) {
-	Process(req.ID, req.CC, req.NATS, r)
+	Process(req.CC, req.NATS, r)
 }
 
 // RespHandler is required to send messages.

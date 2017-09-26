@@ -8,14 +8,32 @@
   revision = "17ca55af25aee0fa3f2e36ffd39351d5684ff571"
 
 [[projects]]
+  name = "github.com/nats-io/go-nats"
+  packages = [".","encoders/builtin","util"]
+  revision = "29f9728a183bf3fa7e809e14edac00b33be72088"
+  version = "v1.3.0"
+
+[[projects]]
+  name = "github.com/nats-io/nuid"
+  packages = ["."]
+  revision = "289cccf02c178dc782430d534e3c1f5b72af807f"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
+[[projects]]
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "879c5887cd475cd7864858769793b2ceb0d44feb"
+  version = "v1.1.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "240d3ddd5a22885dc0b7dbfec79706b5c104bb40dc7bc7fd642c9928b5a6fbfc"
+  inputs-digest = "bea74445ff72380c377dc699c1d241bfcc82bae04e3b2a4d76457eb073cb0d1d"
   solver-name = "gps-cdcl"
   solver-version = 1

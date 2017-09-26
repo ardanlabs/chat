@@ -32,6 +32,8 @@ func (m MSG) String() string {
 // Read waits on the network to receive a chat message.
 func Read(r io.Reader) ([]byte, int, error) {
 
+	// TODO: Not handling potential partial reads.
+
 	// Read the first header length of bytes.
 	buf := make([]byte, hdrLength)
 	if _, err := io.ReadFull(r, buf); err != nil {
@@ -83,28 +85,28 @@ func Decode(data []byte) MSG {
 }
 
 // Encode will take a message and produce byte slice.
-func Encode(msg MSG) []byte {
+func Encode(m MSG) []byte {
 
 	// We can't have more than the first 10 bytes.
-	ns := len(msg.Sender)
+	ns := len(m.Sender)
 	if ns > 10 {
 		ns = 10
 	}
 
-	nr := len(msg.Recipient)
+	nr := len(m.Recipient)
 	if nr > 10 {
 		nr = 10
 	}
 
 	// Create a slice of the exact length we need.
-	data := make([]byte, hdrLength+len(msg.Data))
+	data := make([]byte, hdrLength+len(m.Data))
 
 	// Copy the bytes into the slice for our protocol.
 
-	copy(data, msg.Sender[:ns])
-	copy(data[10:], msg.Recipient[:nr])
-	binary.BigEndian.PutUint16(data[20:22], uint16(len(msg.Data)))
-	copy(data[22:], msg.Data)
+	copy(data, m.Sender[:ns])
+	copy(data[10:], m.Recipient[:nr])
+	binary.BigEndian.PutUint16(data[20:22], uint16(len(m.Data)))
+	copy(data[22:], m.Data)
 
 	return data
 }

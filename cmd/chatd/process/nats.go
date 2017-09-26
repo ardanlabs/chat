@@ -8,46 +8,76 @@ go get github.com/nats-io/gnatsd
 
 # Run the server
 gnatsd
-
 */
 
 import (
-	"encoding/json"
+	"context"
 	"log"
 	"time"
 
 	"github.com/ardanlabs/chat/internal/msg"
+	"github.com/ardanlabs/chat/internal/platform/cache"
 	"github.com/ardanlabs/kit/tcp"
 	nats "github.com/nats-io/go-nats"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
+
+// natsProcess handles the messages that are consumed from nats.
+func natsProcess(cc *cache.Cache, nts *NATS, t *tcp.TCP, nm *nats.Msg) {
+	switch nm.Subject {
+	case natsSubject:
+
+		// Decode the message received.
+		id, m := natsDecode(nm.Data)
+		log.Printf("Nats_Process : IP[ nats ] : Inbound : ID[ %s ]%v\n", id, m)
+
+		// Encode the message for socket delivery.
+		d := msg.Encode(m)
+
+		// Send this to all connected clients.
+		for _, client := range cc.Get(m.Sender) {
+			ipAddress := client.TCPAddr.IP.String()
+
+			log.Printf("Nats_Process : IP[ %s ] : Send : client[ %s ]\n", ipAddress, client.ID)
+
+			// Prepare a response and send it.
+			resp := tcp.Response{
+				TCPAddr: client.TCPAddr,
+				Data:    d,
+				Length:  len(d),
+			}
+			if err := t.Send(context.TODO(), &resp); err != nil {
+				log.Printf("Socket_Process : IP[ %s ] : ERROR : Send : %s\n", ipAddress, err)
+			}
+		}
+
+	default:
+		log.Printf("Nats_Process : IP[ nats ] : Inbound : Unknown Subject[ %s ]\n", nm.Subject)
+	}
+}
+
+// =============================================================================
 
 // Nats subjects.
 const (
 	natsSubject = "msg" // Handling based communication.
 )
 
-// natsMsg is sent to other chat servers.
-type natsMsg struct {
-	ID  string
-	MSG msg.MSG
+// NATSConfig represents required configuration for the nats system.
+type NATSConfig struct {
+	Host string
+	CC   *cache.Cache
+	TCP  *tcp.TCP
 }
-
-// =============================================================================
 
 // NATS represents a nats system from message handling.
 type NATS struct {
 	Config NATSConfig
 
+	id   string
 	conn *nats.Conn
 	subs map[string]*nats.Subscription
-}
-
-// NATSConfig represents required configuration for the nats system.
-type NATSConfig struct {
-	Host string
-	ID   string
-	TCP  *tcp.TCP
 }
 
 // StartNATS initializes access to a nats system.
@@ -71,16 +101,14 @@ func StartNATS(cfg NATSConfig) (*NATS, error) {
 	// Construct the nats value.
 	nts := NATS{
 		Config: cfg,
+		id:     uuid.NewV1().String(),
 		conn:   conn,
 		subs:   make(map[string]*nats.Subscription),
 	}
 
 	// Declare the event handler for handling recieved messages.
 	f := func(msg *nats.Msg) {
-		// TODO: Don't process your own message, check ID.
-
-		// Process Function
-		log.Println(string(msg.Data))
+		natsProcess(cfg.CC, &nts, cfg.TCP, msg)
 	}
 
 	// Register the event handler for each known subject.
@@ -125,14 +153,37 @@ func (nts *NATS) Stop() {
 }
 
 // SendMsg publishes the nats  to other Tea services.
-func (nts *NATS) SendMsg(msg natsMsg) error {
+func (nts *NATS) SendMsg(m msg.MSG) error {
+	log.Printf("Nats_Process : IP[ nats ] : Outbound : Sending To NATS : %v\n", m)
 
-	log.Printf("Nats_Process : IP[ nats ] : Outbound : Sending To NATS : %v\n", msg)
+	return nts.conn.Publish(natsSubject, nts.natsEncode(m))
+}
 
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return errors.Wrap(err, "marshaling")
-	}
+// ledID represents the length of the UUID based string we use for the id.
+const lenID = 36
 
-	return nts.conn.Publish(natsSubject, data)
+// natsEncode encodes the natsMsg so it can be sent to other Chat services.
+func (nts *NATS) natsEncode(m msg.MSG) []byte {
+
+	// Encode the message into bytes.
+	mData := msg.Encode(m)
+
+	// Create a slice large enough to hold all the data.
+	ld := len(mData)
+	data := make([]byte, lenID+ld)
+
+	// Copy the all the data for delivery.
+	copy(data, nts.id)
+	copy(data[lenID:], mData)
+
+	return data
+}
+
+// natsDecode decodes the byte data into a msg.MSG.
+func natsDecode(data []byte) (string, msg.MSG) {
+
+	// Decode the part of the data that represents the id.
+	id := string(data[:lenID])
+
+	return id, msg.Decode(data[lenID:])
 }

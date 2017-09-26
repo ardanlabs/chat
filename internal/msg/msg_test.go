@@ -13,12 +13,12 @@ const failed = "\u2717"
 func TestEncode(t *testing.T) {
 	tt := []struct {
 		name   string
-		msg    msg.MSG
+		m      msg.MSG
 		length int
 	}{
 		{
 			name: "length",
-			msg: msg.MSG{
+			m: msg.MSG{
 				Sender:    "BillKenned",
 				Recipient: "JillKenned",
 				Data:      "hello",
@@ -27,7 +27,7 @@ func TestEncode(t *testing.T) {
 		},
 		{
 			name: "shortname",
-			msg: msg.MSG{
+			m: msg.MSG{
 				Sender:    "Bill",
 				Recipient: "Cory",
 				Data:      "helloworld",
@@ -41,25 +41,25 @@ func TestEncode(t *testing.T) {
 		for i, tst := range tt {
 			t.Logf("\tTest %d:\t%s", i, tst.name)
 			{
-				data := msg.Encode(tst.msg)
+				data := msg.Encode(tst.m)
 				if len(data) != tst.length {
 					t.Fatalf("\t%s\tShould have the correct number of bytes : exp[%d] got[%d]\n", failed, tst.length, len(data))
 				}
 				t.Logf("\t%s\tShould have the correct number of bytes.\n", succeed)
 
-				msg := msg.Decode(data)
-				if msg.Sender != tst.msg.Sender {
-					t.Fatalf("\t%s\tShould have the correct Sender : exp[%v] got[%v]\n", failed, tst.msg.Sender, msg.Sender)
+				m := msg.Decode(data)
+				if m.Sender != tst.m.Sender {
+					t.Fatalf("\t%s\tShould have the correct Sender : exp[%v] got[%v]\n", failed, tst.m.Sender, m.Sender)
 				}
 				t.Logf("\t%s\tShould have the correct Sender.\n", succeed)
 
-				if msg.Recipient != tst.msg.Recipient {
-					t.Fatalf("\t%s\tShould have the correct Recipient : exp[%v] got[%v]\n", failed, tst.msg.Recipient, msg.Recipient)
+				if m.Recipient != tst.m.Recipient {
+					t.Fatalf("\t%s\tShould have the correct Recipient : exp[%v] got[%v]\n", failed, tst.m.Recipient, m.Recipient)
 				}
 				t.Logf("\t%s\tShould have the correct Recipient.\n", succeed)
 
-				if msg.Data != tst.msg.Data {
-					t.Fatalf("\t%s\tShould have the correct data : exp[%s] got[%s]\n", failed, tst.msg.Data, msg.Data)
+				if m.Data != tst.m.Data {
+					t.Fatalf("\t%s\tShould have the correct data : exp[%s] got[%s]\n", failed, tst.m.Data, m.Data)
 				}
 				t.Logf("\t%s\tShould have the correct data.\n", succeed)
 			}

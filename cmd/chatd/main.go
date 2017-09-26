@@ -4,8 +4,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
-	"time"
 
 	"github.com/ardanlabs/chat/cmd/chatd/process"
 	"github.com/ardanlabs/chat/internal/platform/cache"
@@ -14,20 +12,26 @@ import (
 )
 
 /*
-Deal with reading partial bytes in Read call.
+Things TODO:
+1. Add support for signaling out a specific receipient
+2. Fix the Add call to cache so we don't add twice
+	* Maybe add a type to the message
+		* Type 1: Init
+		* Type 2: Message
 */
 
 // Configuation settings.
-const (
-	configKey = "CHAT"
-)
+const configKey = "CHAT"
 
 func init() {
-	idInt := time.Now().UnixNano()
 
-	os.Setenv("CHAT_HOST", ":6001")
-	os.Setenv("CHAT_NATS_HOST", "nats://localhost:4222")
-	os.Setenv("CHAT_ID", strconv.Itoa(int(idInt)))
+	// Setup default values that can be overridden in the env.
+	if _, b := os.LookupEnv("CHAT_HOST"); !b {
+		os.Setenv("CHAT_HOST", ":6000")
+	}
+	if _, b := os.LookupEnv("CHAT_NATS_HOST"); !b {
+		os.Setenv("CHAT_NATS_HOST", "nats://localhost:4222")
+	}
 
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
@@ -48,7 +52,6 @@ func main() {
 	// Get configuration.
 	host := cfg.MustString("HOST")
 	nats := cfg.MustString("NATS_HOST")
-	id := cfg.MustString("ID")
 
 	// =========================================================================
 	// Init the caching system.
@@ -63,7 +66,6 @@ func main() {
 	}
 
 	reqHandler := process.ReqHandler{
-		ID: id,
 		CC: cc,
 	}
 
@@ -101,7 +103,7 @@ func main() {
 
 	natsCfg := process.NATSConfig{
 		Host: nats,
-		ID:   id,
+		CC:   cc,
 		TCP:  t,
 	}
 
