@@ -7,9 +7,15 @@
   packages = ["cfg","tcp"]
   revision = "17ca55af25aee0fa3f2e36ffd39351d5684ff571"
 
+[[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d9c80a89a3e7f13837eda006df1b0f3fc371b576ae05af7de54b9e2bdc54411f"
+  inputs-digest = "240d3ddd5a22885dc0b7dbfec79706b5c104bb40dc7bc7fd642c9928b5a6fbfc"
   solver-name = "gps-cdcl"
   solver-version = 1

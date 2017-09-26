@@ -11,7 +11,6 @@ const failed = "\u2717"
 
 // TestEncode test that the encoding of a message works.
 func TestEncode(t *testing.T) {
-
 	tt := []struct {
 		name   string
 		msg    msg.MSG
@@ -20,22 +19,24 @@ func TestEncode(t *testing.T) {
 		{
 			name: "length",
 			msg: msg.MSG{
-				Name: "0123456789",
-				Data: "hello",
+				Sender:    "BillKenned",
+				Recipient: "JillKenned",
+				Data:      "hello",
 			},
-			length: 17,
+			length: 27,
 		},
 		{
 			name: "shortname",
 			msg: msg.MSG{
-				Name: "012345",
-				Data: "helloworld",
+				Sender:    "Bill",
+				Recipient: "Cory",
+				Data:      "helloworld",
 			},
-			length: 22,
+			length: 32,
 		},
 	}
 
-	t.Log("Given the need to test encoding.")
+	t.Log("Given the need to test encoding/decoding.")
 	{
 		for i, tst := range tt {
 			t.Logf("\tTest %d:\t%s", i, tst.name)
@@ -47,11 +48,15 @@ func TestEncode(t *testing.T) {
 				t.Logf("\t%s\tShould have the correct number of bytes.\n", succeed)
 
 				msg := msg.Decode(data)
-
-				if msg.Name != tst.msg.Name {
-					t.Fatalf("\t%s\tShould have the correct name : exp[%v] got[%v]\n", failed, tst.msg.Name, msg.Name)
+				if msg.Sender != tst.msg.Sender {
+					t.Fatalf("\t%s\tShould have the correct Sender : exp[%v] got[%v]\n", failed, tst.msg.Sender, msg.Sender)
 				}
-				t.Logf("\t%s\tShould have the correct name.\n", succeed)
+				t.Logf("\t%s\tShould have the correct Sender.\n", succeed)
+
+				if msg.Recipient != tst.msg.Recipient {
+					t.Fatalf("\t%s\tShould have the correct Recipient : exp[%v] got[%v]\n", failed, tst.msg.Recipient, msg.Recipient)
+				}
+				t.Logf("\t%s\tShould have the correct Recipient.\n", succeed)
 
 				if msg.Data != tst.msg.Data {
 					t.Fatalf("\t%s\tShould have the correct data : exp[%s] got[%s]\n", failed, tst.msg.Data, msg.Data)

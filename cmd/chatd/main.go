@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
 
+	"github.com/ardanlabs/chat/cmd/chatd/process"
 	"github.com/ardanlabs/kit/cfg"
 	"github.com/ardanlabs/kit/tcp"
 )
@@ -44,12 +44,12 @@ func main() {
 		NetType: "tcp4",
 		Addr:    host,
 
-		ConnHandler: connHandler{},
-		ReqHandler:  reqHandler{},
-		RespHandler: respHandler{},
+		ConnHandler: process.ConnHandler{},
+		ReqHandler:  process.ReqHandler{},
+		RespHandler: process.RespHandler{},
 
 		OptEvent: tcp.OptEvent{
-			Event: Event,
+			Event: process.Event,
 		},
 	}
 
@@ -73,27 +73,4 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)
 	<-sigChan
-}
-
-var evtTypes = []string{
-	"unknown",
-	"Accept",
-	"Join",
-	"Read",
-	"Remove",
-	"Drop",
-	"Groom",
-}
-
-// Set of event sub types.
-var typTypes = []string{
-	"unknown",
-	"Error",
-	"Info",
-	"Trigger",
-}
-
-// Event writes tcp events.
-func Event(evt, typ int, ipAddress string, format string, a ...interface{}) {
-	log.Printf("****> EVENT : IP[ %s ] : EVT[%s] TYP[%s] : %s", ipAddress, evtTypes[evt], typTypes[typ], fmt.Sprintf(format, a...))
 }

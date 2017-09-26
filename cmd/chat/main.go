@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"log"
 	"net"
 
@@ -16,18 +15,22 @@ func main() {
 		log.Println("dial", err)
 	}
 
-	m := msg.MSG{
-		Name: "0123456789",
-		Data: "Hello There",
+	mSend := msg.MSG{
+		Sender:    "Bill",
+		Recipient: "Cory",
+		Data:      "Hello There",
 	}
 
-	data := msg.Encode(m)
+	data := msg.Encode(mSend)
 
 	if _, err := conn.Write(data); err != nil {
 		log.Println("write", err)
 	}
 
-	bufReader := bufio.NewReader(conn)
-	response, err := bufReader.ReadString('\n')
-	log.Println(response)
+	if data, _, err = msg.Read(conn); err != nil {
+		log.Println("read", err)
+	}
+
+	mRecv := msg.Decode(data)
+	log.Println(mRecv)
 }
